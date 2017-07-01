@@ -8,10 +8,12 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Web.Http.Description;
+using WebApplication1.ActionFilters;
 using WebApplication1.Models;
 
 namespace WebApplication1.Controllers
 {
+
     public class ClientsController : ApiController
     {
         private FabricsEntities1 db = new FabricsEntities1();
@@ -29,15 +31,19 @@ namespace WebApplication1.Controllers
 
         // GET: api/Clients/5
         [ResponseType(typeof(Client))]
-        public IHttpActionResult GetClient(int id)
+		[Route("clients/{id:int}",Name = "GetClientById")]
+		public HttpResponseMessage GetClient(int id)
         {
             Client client = db.Client.Find(id);
             if (client == null)
             {
-                return NotFound();
+                return new HttpResponseMessage()
+                {
+                    StatusCode = HttpStatusCode.NotFound
+                };
             }
 
-            return Ok(client);
+            return Request.CreateResponse(HttpStatusCode.OK, client);
         }
 
 		[Route("clients/{id:int}/orders")]
@@ -45,6 +51,11 @@ namespace WebApplication1.Controllers
 		public IHttpActionResult GetClientByClientId(int id)
 		{
 			var orders = db.Order.Where(x => x.ClientId == id);
+
+            if (orders == null || !orders.Any())
+			{
+				return RedirectToRoute("GetClientById", new { id = id });
+			}
 
 			return Ok(orders);
 		}
@@ -109,7 +120,9 @@ namespace WebApplication1.Controllers
         }
 
         // POST: api/Clients
+        [ValidateModel]
         [ResponseType(typeof(Client))]
+        [Route("clients")]
         public IHttpActionResult PostClient(Client client)
         {
             if (!ModelState.IsValid)
